@@ -1,0 +1,29 @@
+#!/bin/sh
+
+func_mkdir(){
+    if test -n $1; then
+      if test ! -d $1; then
+        echo [Creates directory $1]
+        mkdir $1
+        if test ! -d $1; then
+          echo Failed to create directory.
+          exit -1
+        fi
+      fi
+    fi
+}
+
+cur_dir=$PWD
+cd $(dirname $0)
+cd ..
+#PWD Qlevel/
+src_dir=$PWD/test/db_test
+cd $cur_dir
+
+echo $(basename $0) is building Qdb_test
+func_mkdir db_test; cd db_test
+MAKE=make
+MAKEFILE="CodeBlocks - Unix Makefiles"
+sh -c "cmake -G\"$MAKEFILE\" -DCMAKE_BUILD_TYPE=DEBUG $src_dir"
+echo [Make Qdb_test]; $MAKE
+

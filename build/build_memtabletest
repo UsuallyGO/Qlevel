@@ -1,0 +1,28 @@
+#!/bin/sh
+
+func_mkdir(){
+    if test -n $1; then
+      if test ! -d $1; then
+        echo [Creates directory $1]
+        mkdir $1
+        if test ! -d $1; then
+          echo Failed to create directory.
+          exit -1
+        fi
+      fi
+    fi
+}
+
+cur_dir=$PWD
+cd $(dirname $0)
+cd ..
+#PWD Qlevel/
+src_dir=$PWD/test/memtable_test
+cd $cur_dir
+
+echo $(basename $0) is building Qmemtable test
+func_mkdir memtable_test; cd memtable_test
+MAKE=make
+MAKEFILE="CodeBlocks - Unix Makefiles"
+sh -c "cmake -G\"$MAKEFILE\" -DCMAKE_BUILD_TYPE=DEBUG $src_dir"
+echo [Make Qmemtable_test]; $MAKE

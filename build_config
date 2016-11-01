@@ -1,0 +1,101 @@
+#!/bin/sh
+
+OUTPUT=
+PREFIX=
+BUILD_STATIC=no
+
+while test $# -gt 0; do
+  opt=$1
+  shift
+  case $opt in
+    --build_static)
+        BUILD_STATIC=yes
+        ;;
+	--build_shared)
+		BUILD_SHARED=no
+		;;
+    --output)
+        OUTPUT=$1
+		shift
+        ;;
+    --source)
+        PREFIX=$1
+		shift
+        ;;
+    *)
+        echo "unknow parameters"
+        exit 0
+        ;;
+  esac
+done
+
+if test -z "$OUTPUT"; then
+  #set default filename
+  OUTPUT="qlevel_make_config"
+fi
+
+if test -z "$PREFIX"; then
+  #set default source directory
+  PREFIX=$PWD
+fi
+
+#Delete existing output file, if it exists
+rm -f $OUTPUT
+touch $OUTPUT
+
+if test -z "$CC"; then
+	#cc is just gcc in linux
+	CC=cc
+fi
+
+if test -z "$CXX"; then
+	CXX=g++
+fi
+
+if test -z "$TARGET_OS"; then
+    TARGET_OS=`uname -s`
+fi
+
+PLATFORM_SHARED_EXT="so"
+PLATFORM_STATIC_EXT="a"
+PLATFORM_SHARED_LDFLAGS="-shared "
+PLATFORM_SHARED_CFLAGS="-fPIC"
+
+if [ "$BUILD_STATIC" = "yes" ];
+  then
+	STATIC_OR_SHARED=static
+  else 
+    STATIC_OR_SHARED=shared
+fi
+
+case "$TARGET_OS" in
+    Linux)
+    PLATFORM=OS_LINUX
+    PLATFORM_LDFLAGS="-pthread"
+	PORT_FILES=$PREFIX/port/port_posix.cpp
+	;;
+	*)
+	echo "Unknonw portable platform!" >&2
+	exit 1
+esac
+
+DIRS="$PREFIX/db $PREFIX/dbimpl"
+set -f
+PRUNE_TEST="-name *test*.cpp -prune"
+SOURCE_FILES=`find $DIRS $PRUNE_TEST -o -name '*.cpp' -print | sort | tr "\n" " "`
+SOURCE_OBJS=`find $DIRS $PRUNE_TEST -o -name '*.cpp' -print | sort | sed "s,^$PREFIX/db/,,"\
+				|sed "s,^$PREFIX/dbimpl/,,"|tr "\n" " "`
+SOURCE_OBJS="$SOURCE_OBJS port_posix.o"
+set +f
+
+echo "MAKEFILE_PATH=$PREFIX">>$OUTPUT
+echo "CC=$CC">>$OUTPUT
+echo "CXX=$CXX">>$OUTPUT
+echo "SOURCES=$SOURCE_FILES $PORT_FILES">>$OUTPUT
+echo "SOURCE_OBJS=$SOURCE_OBJS">>$OUTPUT
+echo "STATIC_OR_SHARED=$STATIC_OR_SHARED">>$OUTPUT
+echo "PLATFORM=$PLATFORM">>$OUTPUT
+echo "PLATFORM_LDFLAGS=$PLATFORM_LDFLAGS">>$OUTPUT
+echo "PLATFORM_SHARED_EXT=$PLATFORM_SHARED_EXT">>$OUTPUT
+echo "PLATFORM_SHARED_LDFLAGS=$PLATFORM_SHARED_LDFLAGS">>$OUTPUT
+echo "PLATFORM_SHARED_CFLAGS=$PLATFORM_SHARED_CFLAGS">>$OUTPUT

@@ -1,0 +1,82 @@
+#!/bin/sh
+
+func_help(){
+    echo \'build_qlevel\' build Qlevel and its depend libraries.
+    echo Usage: $* [OPTIONS]...
+    echo Options:
+    echo "-d, --debug    Build with debug information."
+    echo "-h, --help     Shows Qlevel build help message."
+    echo "--build_static Build static library."
+    echo "--prefix DIR   Specify install directory [default is PWD]."
+    echo "--clean        Remove all files created by build system."
+}
+
+func_mkdir(){
+    if test -n $1; then
+      if test ! -d $1; then
+        echo [Creates directory $1]
+        mkdir $1
+        if test ! -d $1; then
+          echo Failed to create directory.
+          exit -1
+        fi
+      fi
+    fi
+}
+
+opt_debug=true
+opt_prefix=$PWD
+opt_clean=false
+build_static=no
+
+cur_dir=$PWD
+cd $(dirname $0)
+cd ..
+src_dir=$PWD
+cd $cur_dir
+
+Q_levellib=libqlevel.so
+while test $# -gt 0; do
+    opt=$1
+    shift
+    case $opt in
+      -d|--debug) opt_debug=:
+                  ;;
+      -h|--help)  func_help $0
+                  exit 0
+                  ;;
+      --build_static)
+      			  build_static=yes
+      			  Q_levellib=libqlevel.a
+      			  ;;
+      --prefix)   opt_prefix=$1
+                  shift
+                  ;;
+      --clean)    opt_clean=:
+                  ;;
+      *)          func_help $0
+                   exit 0
+                  ;;
+    esac
+done
+
+cmake_debug="-DCMAKE_BUILD_TYPE=RELEASE"
+if $opt_debug; then
+    cmake_debug="-DCMAKE_BUILD_TYPE=DEBUG"
+fi
+
+cmake_install="install"
+
+echo $(basename $0) is building Qlevel
+func_mkdir qlevel; cd qlevel
+MAKE=make
+MAKEFILE="CodeBlocks - Unix Makefiles"
+#can only compiled in linux right now...
+sh -c "cmake -G\"$MAKEFILE\" -DCMAKE_INSTALL_PREFIX=$opt_prefix \
+           -DBUILD_STATIC=$build_static $cmake_debug $src_dir/db/"
+echo [Make Qlevel]; $MAKE
+if test ! -f $opt_prefix/lib/$Q_levellib \
+|| test $Q_levellib -nt $opt_prefix/lib/$Q_levellib; then
+   echo [Install Qlib]
+   $MAKE $cmake_install
+fi
